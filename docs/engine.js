@@ -7,17 +7,6 @@
     15: [31], 16: [32], 17: [],
   };
 
-  const HEADERS7 = [
-    "", "ГП", "Секция", "Этаж", "Номер квартиры", "Номер на этаже", "Кол-во квартир на этаже",
-    "Этажность", "Кол-во комнат", "Жилая S квартиры",
-    "S без учета балконов/лоджий/террас (без зимнего сада)",
-    "S без учета балконов/лоджий/террас (с зимним садом)",
-    "Общая S балконов/лоджий/террас (без кф)",
-    "S с учетом балконов/лоджий/террас (без кф)",
-    "S балконов/лоджий/террас (с кф)",
-    "Продаваемая S с учетом балконов/лоджий/террас (с кф)",
-  ];
-
   const STEPS = [
     { id: "accept", label: "Приём исходного файла" },
     { id: "format", label: "Определение формата" },
@@ -287,64 +276,82 @@
     return s;
   }
 
-  function formulas(row, last) {
-    return {
-      H: `=_xlfn.MAXIFS($D$8:$D$${last},$C$8:$C$${last},C${row},$B$8:$B$${last},B${row})`,
-      I: `=IF(AND(AF${row}="студия",AK${row}<>"",AL${row}>0),"ст",IF(AL${row}>0,COUNTA(AL${row},AQ${row},AV${row},BA${row},BF${row}),""))`,
-      J: `=SUM(AL${row},AQ${row},AV${row},BA${row},BF${row})`,
-      K: `=SUM(Q${row}:BM${row})`,
-      L: `=K${row}+CB${row}`,
-      M: `=SUM(BP${row},BT${row},BX${row},CE${row},CI${row},CM${row},CP${row},CS${row})`,
-      N: `=L${row}+M${row}`,
-      O: `=SUM(BQ${row},BU${row},BY${row},CF${row},CJ${row},CN${row},CQ${row},CT${row})`,
-      P: `=L${row}+O${row}`,
-    };
-  }
-
   function letterToIndex(letter) {
     let n = 0;
     for (let i = 0; i < letter.length; i++) n = n * 26 + (letter.charCodeAt(i) - 64);
     return n;
   }
 
-  function buildWorkbook(rows, meta) {
-    const last = 7 + rows.length;
-    const aoa = [];
-    aoa[0] = ["Матрица квартирографии · автозаполнение агентом"];
-    aoa[1] = ["Источник", meta.fileName, "Формат", meta.sourceKind];
-    aoa[6] = HEADERS7.slice();
-    while (aoa[6].length < 90) aoa[6].push("");
-    aoa[6][19] = "Прихожая";
-    aoa[6][31] = "Тип кухни";
-    aoa[6][32] = "S кухни";
-    aoa[6][35] = "Тип помещения 1";
-    aoa[6][36] = "Тип комнаты 1";
-    aoa[6][37] = "Комната 1";
-    aoa[6][60] = "С/у1";
-    aoa[6][82] = "Лоджия";
-    aoa[6][83] = "Лоджия с кф";
+  function retargetFormula(formula, row, last) {
+    let s = String(formula);
+    s = s.replace(/\$([A-Za-z]{1,3})\$8:\$\1\$\d+/g, (_, col) => `$${col}$8:$${col}$${last}`);
+    s = s.replace(/\$8:\$\d+/g, `$8:$${last}`);
+    s = s.replace(/(\$?[A-Za-z]{1,3})(\$?)8(?!\d)/g, (m, col, abs) => (abs ? m : col + row));
+    return s;
+  }
 
-    const keys = ["A","B","C","D","E","F","G","T","AF","AG","AJ","AK","AL","AO","AP","AQ","AT","AU","AV","BI","CE","CF","CG","CH"];
+  let skeleton = null;
+  async function loadSkeleton() {
+    if (skeleton) return skeleton;
+    const res = await fetch("template-skeleton.json");
+    if (!res.ok) throw new Error("Не загружен шаблон матрицы ГП-10");
+    skeleton = await res.json();
+    return skeleton;
+  }
+
+  function buildWorkbook(rows, meta, skel) {
+    if (!skel) throw new Error("Нет шаблона матрицы");
+    const last = 7 + rows.length;
+    const maxCol = skel.maxCol || 349;
+    const aoa = [];
+    (skel.headers || []).forEach((row) => {
+      const line = (row || []).slice();
+      while (line.length < maxCol) line.push(null);
+      aoa.push(line);
+    });
+    while (aoa.length < 7) aoa.push(new Array(maxCol).fill(null));
+    if (!aoa[0]) aoa[0] = new Array(maxCol).fill(null);
+    aoa[0][0] = `Матрица квартирографии · ${meta.fileName || ""} · ${rows.length} кв.`;
+
+    const formulas = skel.formulas || [];
     rows.forEach((row, i) => {
       const ridx = 8 + i;
-      const line = new Array(90);
-      const f = formulas(ridx, last);
-      Object.entries(f).forEach(([k, v]) => { line[letterToIndex(k) - 1] = v; });
-      keys.forEach((k) => {
-        if (row[k] !== undefined) line[letterToIndex(k) - 1] = row[k];
+      const line = new Array(maxCol).fill(null);
+      formulas.forEach((f, c) => {
+        if (f) line[c] = retargetFormula(f, ridx, last);
+      });
+      Object.keys(row).forEach((k) => {
+        if (k === "notes" || row[k] === undefined) return;
+        const idx = letterToIndex(k);
+        if (idx > 0) line[idx - 1] = row[k];
       });
       aoa[ridx - 1] = line;
     });
 
     const ws = XLSX.utils.aoa_to_sheet(aoa);
-    ws["!cols"] = [{ wch: 6 }, { wch: 8 }, { wch: 10 }, { wch: 8 }, { wch: 14 }, { wch: 12 }, { wch: 14 }];
+    ws["!ref"] = XLSX.utils.encode_range({
+      s: { r: 0, c: 0 },
+      e: { r: Math.max(6, last - 1), c: maxCol - 1 },
+    });
+    if (skel.merges && skel.merges.length && XLSX.utils.decode_range) {
+      ws["!merges"] = skel.merges.map((ref) => XLSX.utils.decode_range(ref));
+    }
+    if (skel.colWidths) {
+      ws["!cols"] = skel.colWidths.map((w) => (w ? { wch: w } : {}));
+    }
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, skel.living || "Квартирография (жилое)");
+    Object.keys(skel.sheets || {}).forEach((name) => {
+      const grid = skel.sheets[name] || [];
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(grid), name.slice(0, 31));
+    });
+
     const review = [["Лот", "Этаж", "Секция", "Причина"]];
     rows.forEach((row) => {
       (row.notes || []).forEach((n) => review.push([row.E, row.D, row.C, n]));
     });
-    review.push(["", "", "", "Обработка в браузере. RVT не читается без IFC/PDF."]);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Квартирография (жилое)");
+    review.push(["", "", "", "Лист и формулы — как в шаблоне ГП-10. VBA макросов в выгрузке нет."]);
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(review), "Требует проверки");
     return wb;
   }
@@ -432,6 +439,8 @@
     uniqueByNum,
     composeAll,
     metrics,
+    loadSkeleton,
+    retargetFormula,
     buildWorkbook,
     fromDemoJson,
     extractPdf,

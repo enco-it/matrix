@@ -43,8 +43,8 @@
     });
     fmtHint.textContent =
       fmt === "xlsm"
-        ? "xlsm — контейнер Excel с макросами. VBA образца не копируется (в браузере её нет); лист и формулы записываются."
-        : "xlsx — Excel без макросов. Лист и формулы как в образце ГП-10.";
+        ? "xlsm — контейнер Excel с макросами. VBA шаблона в браузере не копируется; листы, колонки и формулы — как у ГП-10."
+        : "xlsx — Excel без макросов. Листы, 349 колонок и формулы как в шаблоне ГП-10.";
   }
 
   document.getElementById("fmtXlsx").onclick = () => setFmt("xlsx");
@@ -188,7 +188,8 @@
       await mark("compose", "ok");
 
       await mark("book", "run");
-      lastBook = MatrixAgent.buildWorkbook(rows, meta);
+      const skel = await MatrixAgent.loadSkeleton();
+      lastBook = MatrixAgent.buildWorkbook(rows, meta, skel);
       lastName = `Матрица квартирографии_${(file && file.name ? file.name.replace(/\.[^.]+$/, "") : "К-2")}`;
       await mark("book", "ok");
 
@@ -220,4 +221,5 @@
     .then((r) => r.json())
     .then((j) => { demoItems = j; })
     .catch(() => {});
+  MatrixAgent.loadSkeleton().catch(() => {});
 })();

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Агент матрицы квартирографии</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap">
+      <p class="eyebrow">Агент · ЭНКО / matrix</p>
+      <h1>Матрица квартирографии</h1>
+      <p class="lede">Загрузите планировки PDF (экспорт из Revit/CAD). Агент снимет штампы квартир, соберёт лист по образцу ГП-10 и отдаст .xlsx или .xlsm.</p>
+    </div>
+  </header>
+
+  <main class="wrap layout">
+    <section class="panel">
+      <h2>Исходный файл</h2>
+      <label class="drop" id="drop">
+        <input id="file" type="file" accept=".pdf,.rvt,.dwg,.xlsx,.xlsm,application/pdf">
+        <strong id="fileLabel">Выберите или перетащите файл</strong>
+        <span>PDF планировок — основной путь. RVT без IFC не читается в браузере.</span>
+      </label>
+      <div class="row">
+        <button type="button" class="ghost" id="btnDemo">Демо: К-2 Айвазовский</button>
+      </div>
+      <h2>Формат выгрузки</h2>
+      <div class="seg" role="group">
+        <button type="button" class="seg-btn on" data-fmt="xlsx" id="fmtXlsx">.xlsx</button>
+        <button type="button" class="seg-btn" data-fmt="xlsm" id="fmtXlsm">.xlsm</button>
+      </div>
+      <p class="hint" id="fmtHint">xlsx — Excel без макросов. Лист и формулы как в образце ГП-10.</p>
+      <button type="button" class="primary" id="btnRun" disabled>Запустить агента</button>
+    </section>
+
+    <section class="panel">
+      <h2>Ход процесса</h2>
+      <ol class="steps" id="steps"></ol>
+      <div class="bar"><i id="bar"></i></div>
+      <p class="hint" id="status">Ожидание файла</p>
+    </section>
+  </main>
+
+  <section class="wrap" id="metricsBlock" hidden>
+    <h2>Итоговые метрики</h2>
+    <div class="stats" id="stats"></div>
+    <div class="charts">
+      <div>
+        <h3>Квартиры по этажам</h3>
+        <div id="floorBars" class="hbars"></div>
+      </div>
+      <div>
+        <h3>Тип кухни</h3>
+        <div id="kitBars" class="hbars"></div>
+      </div>
+    </div>
+    <table class="grid" id="preview"></table>
+    <div class="row end">
+      <button type="button" class="primary" id="btnDl" hidden>Скачать матрицу</button>
+    </div>
+  </section>
+
+  <footer class="wrap foot">
+    Источник колонок — матрица ГП-10. Обработка идёт в браузере, файлы на сервер не уходят.
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="engine.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,78 @@
+:root {
+  --navy: #122A4B;
+  --ink: #1c2530;
+  --muted: #5E6B78;
+  --line: #DDE3E9;
+  --soft: #F5F8FA;
+  --accent: #C6DCEA;
+  --ok: #1F6B4A;
+  --warn: #8A6420;
+  --bad: #8B2E2E;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  color: var(--ink);
+  font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  background: #fff;
+}
+.wrap { max-width: 980px; margin: 0 auto; padding: 0 24px; }
+.top { background: var(--navy); color: #fff; padding: 40px 0 36px; margin-bottom: 32px; }
+.eyebrow { margin: 0 0 10px; font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: #9BB4CC; }
+h1 { margin: 0 0 10px; font-size: 30px; font-weight: 600; }
+.lede { margin: 0; max-width: 640px; color: #C9D8E6; }
+.layout { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-bottom: 36px; }
+@media (max-width: 800px) { .layout { grid-template-columns: 1fr; } }
+h2 {
+  font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted);
+  border-bottom: 1px solid var(--line); padding-bottom: 8px; margin: 0 0 16px;
+}
+h3 { font-size: 14px; margin: 0 0 10px; color: var(--navy); }
+.panel { background: var(--soft); padding: 20px; border-radius: 10px; }
+.drop {
+  display: flex; flex-direction: column; gap: 6px; padding: 22px;
+  border: 1px dashed #B9CBDD; border-radius: 8px; background: #fff; cursor: pointer;
+}
+.drop.drag { border-color: var(--navy); background: #EEF4F8; }
+.drop input { display: none; }
+.drop strong { color: var(--navy); }
+.drop span { font-size: 13px; color: var(--muted); }
+.row { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+.row.end { justify-content: flex-end; margin: 18px 0 40px; }
+button { font: inherit; cursor: pointer; }
+.primary, .ghost, .seg-btn {
+  border: 0; border-radius: 8px; padding: 10px 16px; font-weight: 600;
+}
+.primary { background: var(--navy); color: #fff; }
+.primary:disabled { opacity: .4; cursor: not-allowed; }
+.ghost { background: #fff; color: var(--navy); border: 1px solid #B9CBDD; }
+.seg { display: flex; gap: 0; border: 1px solid #B9CBDD; border-radius: 8px; overflow: hidden; width: fit-content; }
+.seg-btn { background: #fff; color: var(--muted); border-radius: 0; }
+.seg-btn.on { background: var(--navy); color: #fff; }
+.hint { font-size: 13px; color: var(--muted); margin: 10px 0 16px; }
+.steps { list-style: none; margin: 0; padding: 0; }
+.steps li {
+  display: grid; grid-template-columns: 22px 1fr auto; gap: 10px; align-items: center;
+  padding: 8px 0; border-bottom: 1px solid #E6ECF1; font-size: 14px;
+}
+.steps li:last-child { border-bottom: 0; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: #C5D0DA; }
+.dot.run { background: var(--navy); }
+.dot.ok { background: var(--ok); }
+.dot.err { background: var(--bad); }
+.bar { height: 6px; background: #E3EAF0; border-radius: 99px; overflow: hidden; margin-top: 14px; }
+.bar i { display: block; height: 100%; width: 0; background: var(--navy); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin: 16px 0 24px; }
+.stat { background: var(--soft); padding: 14px; border-radius: 8px; }
+.stat b { display: block; font-size: 24px; color: var(--navy); }
+.stat span { font-size: 13px; color: var(--muted); }
+.charts { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
+@media (max-width: 800px) { .charts { grid-template-columns: 1fr; } }
+.hbar { display: grid; grid-template-columns: 72px 1fr 36px; gap: 8px; align-items: center; font-size: 13px; margin-bottom: 6px; }
+.hbar em { height: 8px; background: var(--navy); border-radius: 2px; display: block; }
+.hbar span { color: var(--muted); text-align: right; }
+.grid { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-bottom: 8px; }
+.grid th { text-align: left; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); border-bottom: 2px solid var(--navy); padding: 0 8px 8px 0; }
+.grid td { padding: 8px 8px 8px 0; border-bottom: 1px solid var(--line); }
+.foot { padding: 24px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); margin-top: 12px; }
+#metricsBlock[hidden] { display: none !important; }

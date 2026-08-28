@@ -1,0 +1,17 @@
+# Local / generated
+.DS_Store
+Thumbs.db
+~$*
+_work/
+__pycache__/
+*.pyc
+
+# Heavy project sources — keep on disk, not in git
+*.rvt
+*.rar
+*.xlsm
+!docs/**
+
+# User result copies and Office locks
+Матрица квартирографии К-2*.xlsx
+Матрица квартирографии К-2*.xlsm

@@ -31,39 +31,142 @@
     return parseFloat(String(s).replace(",", "."));
   }
 
-  function parseStampsFromText(text, pageNo, fileName) {
-    const t = text.replace(/\r/g, "");
-    const re = /(\d)\s*([SMLМм])\s*\n\s*(\d+[.,]\d+)\s*\n\s*(\d+[.,]\d+)\s*\n\s*(\d+[.,]\d+)\s*\n\s*(\d+[.,]\d+)\s*\n\s*№\s*(\d+)/g;
+  function soften(text) {
     const out = [];
-    let m;
-    while ((m = re.exec(t))) {
-      const size = m[2].toUpperCase().replace("М", "M");
-      const areas = [nfloat(m[3]), nfloat(m[4]), nfloat(m[5]), nfloat(m[6])].sort((a, b) => a - b);
-      out.push({
-        rooms: parseInt(m[1], 10),
-        size,
-        live: areas[0],
-        s_wo: areas[1],
-        s_raw: areas[2],
-        s_kf: areas[3],
-        num: parseInt(m[7], 10),
-        page: pageNo,
-      });
-    }
-    const isK2 = /к-?2|k-?2|айвазов/i.test(fileName || "");
-    const floors = isK2 ? (PAGE_FLOORS_K2[pageNo] || []) : guessFloors(t);
-    for (const s of out) {
+    let acc = "";
+    String(text || "").replace(/\r/g, "").split("\n").forEach((line) => {
+      const s = line.trim();
+      if (!s) {
+        if (acc) { out.push(acc); acc = ""; }
+        return;
+      }
+      if (s.length === 1) acc += s;
+      else {
+        if (acc) { out.push(acc); acc = ""; }
+        out.push(s);
+      }
+    });
+    if (acc) out.push(acc);
+    return out.join(" ");
+  }
+
+  function stampRecord(rooms, size, a, b, c, d, num, pageNo) {
+    const areas = [nfloat(a), nfloat(b), nfloat(c), nfloat(d)].sort((x, y) => x - y);
+    return {
+      rooms: parseInt(rooms, 10),
+      size: String(size).toUpperCase().replace("М", "M"),
+      live: areas[0],
+      s_wo: areas[1],
+      s_raw: areas[2],
+      s_kf: areas[3],
+      num: parseInt(num, 10),
+      page: pageNo,
+    };
+  }
+
+  function parseStampsFromText(text, pageNo, fileName) {
+    const out = [];
+    const spaceRe = /([1-6])\s*([SMLМм])\s+(\d+[.,]\d+)\s+(\d+[.,]\d+)\s+(\d+[.,]\d+)\s+(\d+[.,]\d+)\s*(?:[№Nn#]|N[oо]\.?)\s*(\d{1,4})/gi;
+    const glueRe = /([1-6])([SMLМм])(\d+[.,]\d+)(\d+[.,]\d+)(\d+[.,]\d+)(\d+[.,]\d+)(?:[№Nn#])(\d{1,4})/gi;
+    const revRe = /(?:[№Nn#]|N[oо]\.?)\s*(\d{1,4})\s*([1-6])\s*([SMLМм])\s+(\d+[.,]\d+)\s+(\d+[.,]\d+)\s+(\d+[.,]\d+)\s+(\d+[.,]\d+)/gi;
+    const blobs = [
+      String(text || ""),
+      String(text || "").replace(/\s+/g, " "),
+      String(text || "").replace(/\n/g, ""),
+      soften(text),
+    ];
+    blobs.forEach((blob) => {
+      let m;
+      spaceRe.lastIndex = 0;
+      while ((m = spaceRe.exec(blob))) out.push(stampRecord(m[1], m[2], m[3], m[4], m[5], m[6], m[7], pageNo));
+      glueRe.lastIndex = 0;
+      while ((m = glueRe.exec(blob.replace(/\s+/g, "")))) out.push(stampRecord(m[1], m[2], m[3], m[4], m[5], m[6], m[7], pageNo));
+      revRe.lastIndex = 0;
+      while ((m = revRe.exec(blob))) out.push(stampRecord(m[2], m[3], m[4], m[5], m[6], m[7], m[1], pageNo));
+    });
+    return attachFloorSection(out, text, pageNo, fileName);
+  }
+
+  function mergeItems(items) {
+    const pts = (items || [])
+      .filter((it) => it && it.str)
+      .map((it) => {
+        const tr = it.transform || [1, 0, 0, 1, 0, 0];
+        const h = Math.abs(it.height || tr[3] || 8);
+        return { t: it.str, x: tr[4], y: tr[5], w: it.width || h * 0.5 * it.str.length, h };
+      })
+      .sort((a, b) => b.y - a.y || a.x - b.x);
+    const toks = [];
+    pts.forEach((p) => {
+      const last = toks[toks.length - 1];
+      const same = last && Math.abs(last.y - p.y) <= Math.max(2.2, last.h * 0.45);
+      const gap = last ? p.x - (last.x + last.w) : 99;
+      if (same && gap < Math.max(1.8, last.h * 0.4) && gap > -2) {
+        last.t += p.t;
+        last.w = p.x + p.w - last.x;
+        return;
+      }
+      toks.push({ t: p.t, x: p.x, y: p.y, w: p.w, h: p.h });
+    });
+    return toks;
+  }
+
+  function parseStampsFromItems(items, pageNo, fileName) {
+    const toks = mergeItems(items);
+    const out = [];
+    parseStampsFromText(toks.map((t) => t.t).join(" "), pageNo, fileName).forEach((s) => out.push(s));
+    parseStampsFromText(toks.map((t) => t.t).join("\n"), pageNo, fileName).forEach((s) => out.push(s));
+    toks.forEach((tok) => {
+      parseStampsFromText(tok.t, pageNo, fileName).forEach((s) => out.push(s));
+    });
+    const typeRe = /^[1-6][SMLМм]$/i;
+    const areaRe = /^\d+[.,]\d+$/;
+    const types = toks.filter((t) => typeRe.test(t.t.trim()));
+    const areas = toks.filter((t) => areaRe.test(t.t) && nfloat(t.t) >= 3 && nfloat(t.t) <= 450);
+    const nums = [];
+    toks.forEach((t) => {
+      const m = t.t.replace(/\s+/g, "").match(/^[№Nn#]?(\d{1,4})$/);
+      if (!m) return;
+      if (m[1].length >= 4 && t.t.indexOf("№") < 0) return;
+      nums.push({ tok: t, num: parseInt(m[1], 10) });
+    });
+    types.forEach((tp) => {
+      const col = areas
+        .filter((a) => Math.abs(a.x - tp.x) < 36 && Math.abs(a.y - tp.y) < 80)
+        .sort((a, b) => Math.abs(a.y - tp.y) - Math.abs(b.y - tp.y));
+      if (col.length < 4) return;
+      const four = col.slice(0, 4);
+      const cy = four.reduce((s, a) => s + a.y, 0) / 4;
+      const ncand = nums
+        .filter((n) => Math.abs(n.tok.x - tp.x) < 42 && Math.abs(n.tok.y - cy) < 90)
+        .sort((a, b) => Math.hypot(a.tok.x - tp.x, a.tok.y - cy) - Math.hypot(b.tok.x - tp.x, b.tok.y - cy));
+      if (!ncand.length) return;
+      const tm = tp.t.trim().match(/^([1-6])([SMLМм])$/i);
+      out.push(stampRecord(tm[1], tm[2], four[0].t, four[1].t, four[2].t, four[3].t, ncand[0].num, pageNo));
+    });
+    const pageText = toks.map((t) => t.t).join("\n");
+    return attachFloorSection(out, pageText, pageNo, fileName);
+  }
+
+  function attachFloorSection(stamps, text, pageNo, fileName) {
+    const isK2 = /[кkКK]-?2|айвазов/i.test(fileName || "");
+    const floors = isK2 ? (PAGE_FLOORS_K2[pageNo] || []) : guessFloors(text || "");
+    stamps.forEach((s) => {
       s.floor = floors.length === 1 ? floors[0] : floors[0] || null;
       s.floor_candidates = floors;
       s.floor_uncertain = floors.length > 1;
-      s.section = guessSection(t);
-    }
-    return out;
+      s.section = guessSection(text || "");
+    });
+    return stamps;
   }
 
   function guessFloors(text) {
-    const m = text.match(/План\s+(\d+)(?:\s*[-–]\s*(\d+))?\s*этаж/i);
-    if (!m) return [];
+    let m = text.match(/План\s+(\d+)(?:\s*[-–]\s*(\d+))?\s*этаж/i);
+    if (!m) m = text.match(/(\d{1,2})\s*[-–]\s*(\d{1,2})\s*этаж/i);
+    if (!m) {
+      const one = text.match(/(?:этаж|эт\.?)\s*(\d{1,2})\b/i) || text.match(/\b(\d{1,2})\s*этаж/i);
+      return one ? [parseInt(one[1], 10)] : [];
+    }
     const a = parseInt(m[1], 10);
     const b = m[2] ? parseInt(m[2], 10) : a;
     const r = [];
@@ -72,8 +175,13 @@
   }
 
   function guessSection(text) {
-    const m = text.match(/\b2\.[123]\b/);
-    return m ? parseFloat(m[0]) : 1;
+    const m = text.match(/\b(\d{1,2}\.[1-9])\b/);
+    return m ? parseFloat(m[1]) : 1;
+  }
+
+  function guessGp(fileName) {
+    const m = String(fileName || "").match(/(\d{3,4})/);
+    return m ? parseInt(m[1], 10) : 1506;
   }
 
   function uniqueByNum(stamps) {
@@ -276,16 +384,25 @@
 
   async function extractPdf(file, onPage) {
     const buf = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    const pdf = await pdfjsLib.getDocument({
+      data: new Uint8Array(buf),
+      cMapUrl: "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/",
+      cMapPacked: true,
+      standardFontDataUrl: "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/standard_fonts/",
+    }).promise;
     const stamps = [];
+    let chars = 0;
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
       const tc = await page.getTextContent();
-      const text = tc.items.map((it) => it.str).join("\n");
+      const items = tc.items || [];
+      chars += items.reduce((n, it) => n + (it.str ? it.str.length : 0), 0);
+      const text = items.map((it) => it.str || "").join("\n");
       stamps.push(...parseStampsFromText(text, i, file.name));
+      stamps.push(...parseStampsFromItems(items, i, file.name));
       if (onPage) onPage(i, pdf.numPages);
     }
-    return { stamps: uniqueByNum(stamps), pages: pdf.numPages };
+    return { stamps: uniqueByNum(stamps), pages: pdf.numPages, chars };
   }
 
   function composeAll(apts, gp) {
@@ -310,6 +427,8 @@
   global.MatrixAgent = {
     STEPS,
     parseStampsFromText,
+    parseStampsFromItems,
+    guessGp,
     uniqueByNum,
     composeAll,
     metrics,

@@ -21,7 +21,7 @@
   let useDemo = false;
 
   pdfjsLib.GlobalWorkerOptions.workerSrc =
-    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
 
   function renderSteps(state) {
     stepsEl.innerHTML = MatrixAgent.STEPS.map((s) => {
@@ -146,6 +146,10 @@
         await mark("format", "err");
         throw new Error("DWG в браузере не читается. Используйте PDF.");
       }
+      if (kind === "xlsx") {
+        await mark("format", "err");
+        throw new Error("Это уже Excel. Нужен PDF планировок со штампами квартир.");
+      }
       await mark("format", "ok");
 
       await mark("extract", "run");
@@ -168,8 +172,14 @@
           status.textContent = `Лист ${i} из ${n}`;
         });
         apts = extracted.stamps;
-        if (!apts.length) throw new Error("Штампы квартир на PDF не найдены. Нужен векторный поэтажный план.");
-        rows = MatrixAgent.composeAll(apts, 1506);
+        if (!apts.length) {
+          throw new Error(
+            extracted.chars
+              ? `На ${extracted.pages} л. текст есть (${extracted.chars} симв.), но штампы вида 2L + 4 площади + № не собрались. Нужен векторный поэтажный план.`
+              : `На ${extracted.pages} л. нет текстового слоя (скан или шрифт без ToUnicode). Нужен векторный PDF планировок.`
+          );
+        }
+        rows = MatrixAgent.composeAll(apts, MatrixAgent.guessGp(file.name));
         meta = MatrixAgent.metrics(apts, rows, file.name, "pdf");
       }
       await mark("extract", "ok");

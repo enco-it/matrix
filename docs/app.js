@@ -1,4 +1,4 @@
-/* global MatrixAgent, pdfjsLib, XLSX */
+/* global MatrixAgent, pdfjsLib, JSZip */
 (function () {
   const fileEl = document.getElementById("file");
   const drop = document.getElementById("drop");
@@ -14,8 +14,10 @@
   const fmtHint = document.getElementById("fmtHint");
 
   let file = null;
-  let fmt = "xlsx";
-  let lastBook = null;
+  let fmt = "xlsm";
+  let lastBlob = null;
+  let lastRows = null;
+  let lastMeta = null;
   let lastName = "matrix";
   let demoItems = null;
   let useDemo = false;
@@ -43,8 +45,11 @@
     });
     fmtHint.textContent =
       fmt === "xlsm"
-        ? "xlsm — контейнер Excel с макросами. VBA шаблона в браузере не копируется; листы, колонки и формулы — как у ГП-10."
-        : "xlsx — Excel без макросов. Листы, 349 колонок и формулы как в шаблоне ГП-10.";
+        ? "xlsm — копия шаблона ГП-10: форматы ячеек, оформление и VBA."
+        : "xlsx — те же листы и форматы, без макросов VBA.";
+    if (lastRows && lastMeta) {
+      MatrixAgent.exportWorkbook(lastRows, lastMeta, fmt).then((b) => { lastBlob = b; });
+    }
   }
 
   document.getElementById("fmtXlsx").onclick = () => setFmt("xlsx");
@@ -126,7 +131,9 @@
   async function run() {
     btnRun.disabled = true;
     btnDl.hidden = true;
-    lastBook = null;
+    btnDl.hidden = true;
+    lastBlob = null;
+    lastRows = null;
     MatrixAgent.STEPS.forEach((s) => { stepState[s.id] = "idle"; });
     renderSteps(stepState);
     bar.style.width = "0";
@@ -188,8 +195,9 @@
       await mark("compose", "ok");
 
       await mark("book", "run");
-      const skel = await MatrixAgent.loadSkeleton();
-      lastBook = MatrixAgent.buildWorkbook(rows, meta, skel);
+      lastRows = rows;
+      lastMeta = meta;
+      lastBlob = await MatrixAgent.exportWorkbook(rows, meta, fmt);
       lastName = `Матрица квартирографии_${(file && file.name ? file.name.replace(/\.[^.]+$/, "") : "К-2")}`;
       await mark("book", "ok");
 
@@ -212,14 +220,17 @@
     setFile({ name: "К-2_планировки.pdf (демо)" }, true);
   };
   btnDl.onclick = () => {
-    if (!lastBook) return;
-    const bookType = fmt === "xlsm" ? "xlsm" : "xlsx";
-    XLSX.writeFile(lastBook, `${lastName}.${bookType}`, { bookType });
+    if (!lastBlob) return;
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(lastBlob);
+    a.download = `${lastName}.${fmt}`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   };
 
   fetch("demo-k2.json")
     .then((r) => r.json())
     .then((j) => { demoItems = j; })
     .catch(() => {});
-  MatrixAgent.loadSkeleton().catch(() => {});
+  MatrixAgent.loadTemplate().catch(() => {});
 })();

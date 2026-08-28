@@ -11,7 +11,7 @@
     <div class="wrap">
       <p class="eyebrow">Агент · ЭНКО / matrix</p>
       <h1>Матрица квартирографии</h1>
-      <p class="lede">Загрузите планировки PDF (экспорт из Revit/CAD). Агент снимет штампы квартир и соберёт книгу в разметке шаблона ГП-10: те же листы, 349 колонок и формулы. Выгрузка .xlsx или .xlsm (без VBA).</p>
+      <p class="lede">Загрузите планировки PDF. Агент снимет штампы и запишет их в копию шаблона ГП-10: те же форматы ячеек, оформление и VBA. Основная выгрузка — .xlsm.</p>
     </div>
   </header>
 
@@ -28,10 +28,10 @@
       </div>
       <h2>Формат выгрузки</h2>
       <div class="seg" role="group">
-        <button type="button" class="seg-btn on" data-fmt="xlsx" id="fmtXlsx">.xlsx</button>
-        <button type="button" class="seg-btn" data-fmt="xlsm" id="fmtXlsm">.xlsm</button>
+        <button type="button" class="seg-btn" data-fmt="xlsx" id="fmtXlsx">.xlsx</button>
+        <button type="button" class="seg-btn on" data-fmt="xlsm" id="fmtXlsm">.xlsm</button>
       </div>
-      <p class="hint" id="fmtHint">xlsx — Excel без макросов. Листы, 349 колонок и формулы как в шаблоне ГП-10.</p>
+      <p class="hint" id="fmtHint">xlsm — копия шаблона ГП-10: форматы ячеек, оформление и VBA.</p>
       <button type="button" class="primary" id="btnRun" disabled>Запустить агента</button>
     </section>
 
@@ -66,9 +66,10 @@
     Источник колонок — матрица ГП-10. Обработка идёт в браузере, файлы на сервер не уходят.
   </footer>
 
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
-  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <script src="engine.js"></script>
+  <script src="fill.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

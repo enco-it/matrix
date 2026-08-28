@@ -11,6 +11,7 @@ __pycache__/
 *.rar
 *.xlsm
 !docs/**
+!docs/template.xlsm
 
 # User result copies and Office locks
 Матрица квартирографии К-2*.xlsx

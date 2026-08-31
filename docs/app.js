@@ -182,11 +182,11 @@
         if (!apts.length) {
           throw new Error(
             extracted.chars
-              ? `На ${extracted.pages} л. текст есть (${extracted.chars} симв.), но штампы вида 2L + 4 площади + № не собрались. Нужен векторный поэтажный план.`
+              ? `На ${extracted.pages} л. текст есть (${extracted.chars} симв.), но маркировки квартир не собрались (нужны штампы 2L + № или коды вида 91.1.2 + площади). Нужен векторный поэтажный план.`
               : `На ${extracted.pages} л. нет текстового слоя (скан или шрифт без ToUnicode). Нужен векторный PDF планировок.`
           );
         }
-        rows = MatrixAgent.composeAll(apts, MatrixAgent.guessGp(file.name));
+        rows = MatrixAgent.composeAll(apts, MatrixAgent.guessGp(file.name, apts));
         meta = MatrixAgent.metrics(apts, rows, file.name, "pdf");
       }
       await mark("extract", "ok");

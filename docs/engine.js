@@ -58,6 +58,7 @@
     const spaceRe = /([1-6])\s*([SMLМм])\s+(\d+[.,]\d+)\s+(\d+[.,]\d+)\s+(\d+[.,]\d+)\s+(\d+[.,]\d+)\s*(?:[№Nn#]|N[oо]\.?)\s*(\d{1,4})/gi;
     const glueRe = /([1-6])([SMLМм])(\d+[.,]\d+)(\d+[.,]\d+)(\d+[.,]\d+)(\d+[.,]\d+)(?:[№Nn#])(\d{1,4})/gi;
     const revRe = /(?:[№Nn#]|N[oо]\.?)\s*(\d{1,4})\s*([1-6])\s*([SMLМм])\s+(\d+[.,]\d+)\s+(\d+[.,]\d+)\s+(\d+[.,]\d+)\s+(\d+[.,]\d+)/gi;
+    const dottedRe = /(\d+[.,]\d+)\s+(\d+[.,]\d+)\s+(\d+[.,]\d+)\s+(\d{2}\.\d\.\d{1,2})\s+(\d+[.,]\d+)/g;
     const blobs = [
       String(text || ""),
       String(text || "").replace(/\s+/g, " "),
@@ -69,11 +70,41 @@
       spaceRe.lastIndex = 0;
       while ((m = spaceRe.exec(blob))) out.push(stampRecord(m[1], m[2], m[3], m[4], m[5], m[6], m[7], pageNo));
       glueRe.lastIndex = 0;
-      while ((m = glueRe.exec(blob.replace(/\s+/g, "")))) out.push(stampRecord(m[1], m[2], m[3], m[4], m[5], m[6], m[7], pageNo));
+      const glued = blob.replace(/\s+/g, "");
+      if (glued.length < 800) {
+        while ((m = glueRe.exec(glued))) out.push(stampRecord(m[1], m[2], m[3], m[4], m[5], m[6], m[7], pageNo));
+      }
       revRe.lastIndex = 0;
       while ((m = revRe.exec(blob))) out.push(stampRecord(m[2], m[3], m[4], m[5], m[6], m[7], m[1], pageNo));
+      dottedRe.lastIndex = 0;
+      while ((m = dottedRe.exec(blob))) {
+        const rec = fromDottedId(m[4], [nfloat(m[1]), nfloat(m[2]), nfloat(m[3]), nfloat(m[5])], pageNo);
+        if (rec) out.push(rec);
+      }
     });
-    return attachFloorSection(out, text, pageNo, fileName);
+    return out;
+  }
+
+  function fromDottedId(id, areas, pageNo) {
+    const m = String(id).match(/^(\d{2})\.(\d)\.(\d{1,2})$/);
+    if (!m) return null;
+    const sorted = areas.filter((x) => Number.isFinite(x)).sort((a, b) => a - b);
+    if (sorted.length < 3 || sorted[0] < 3 || sorted[sorted.length - 1] > 200) return null;
+    const live = sorted[0];
+    const rec = stampRecord(
+      live < 14 ? 1 : 2,
+      live < 14 ? "S" : "M",
+      sorted[0],
+      sorted[1],
+      sorted[2],
+      sorted[3] != null ? sorted[3] : sorted[2],
+      m[3],
+      pageNo
+    );
+    rec.gp = parseInt(m[1][0], 10);
+    rec.section = parseFloat(`${m[1][0]}.${m[2]}`);
+    rec.code = id;
+    return rec;
   }
 
   function mergeItems(items) {
@@ -100,20 +131,126 @@
     return toks;
   }
 
-  function parseStampsFromItems(items, pageNo, fileName) {
-    const toks = mergeItems(items);
-    const out = [];
-    parseStampsFromText(toks.map((t) => t.t).join(" "), pageNo, fileName).forEach((s) => out.push(s));
-    parseStampsFromText(toks.map((t) => t.t).join("\n"), pageNo, fileName).forEach((s) => out.push(s));
-    toks.forEach((tok) => {
-      parseStampsFromText(tok.t, pageNo, fileName).forEach((s) => out.push(s));
+  function toksToText(toks) {
+    let y = null;
+    const lines = [];
+    let cur = [];
+    (toks || []).forEach((t) => {
+      if (y == null || Math.abs(t.y - y) > Math.max(4, t.h * 0.65)) {
+        if (cur.length) lines.push(cur.join(" "));
+        cur = [t.t];
+        y = t.y;
+      } else cur.push(t.t);
     });
+    if (cur.length) lines.push(cur.join(" "));
+    return lines.join("\n");
+  }
+
+  function dist(a, b) {
+    return Math.hypot((a.x || 0) - (b.x || 0), (a.y || 0) - (b.y || 0));
+  }
+
+  function guessFloorsGeo(toks) {
+    const plans = (toks || []).filter((t) => /^План$/i.test(String(t.t).trim()));
+    const floorWords = (toks || []).filter((t) => /^этаж/i.test(String(t.t).trim()) || /^подвал/i.test(String(t.t).trim()));
+    const ranges = (toks || []).filter((t) => /^\d{1,2}[-–]\d{1,2}$/.test(String(t.t).trim()));
+    const ones = (toks || []).filter((t) => {
+      const s = String(t.t).trim();
+      return /^\d{1,2}$/.test(s) && +s >= 1 && +s <= 40;
+    });
+    const titles = [];
+    plans.forEach((p) => {
+      const fw = floorWords.filter((f) => dist(f, p) < 160);
+      if (!fw.length) return;
+      const rng = ranges.filter((r) => dist(r, p) < 160).sort((a, b) => dist(a, p) - dist(b, p));
+      const one = ones.filter((o) => dist(o, p) < 160).sort((a, b) => dist(a, p) - dist(b, p));
+      if (rng.length) titles.push(rng[0].t.replace("–", "-"));
+      else if (/подвал/i.test(fw[0].t)) titles.push("подвал");
+      else if (one.length) titles.push(one[0].t);
+    });
+    const uniq = [...new Set(titles.map((x) => String(x).replace(/\s+/g, "").toLowerCase()))];
+    if (uniq.length >= 3) return [];
+    if (!uniq.length) return null;
+    const t = uniq[0];
+    const m = String(t).match(/^(\d{1,2})[-–](\d{1,2})$/);
+    if (m) {
+      const a = parseInt(m[1], 10);
+      const b = parseInt(m[2], 10);
+      if (a >= 1 && a <= 40 && b >= a && b <= 40) {
+        const r = [];
+        for (let i = a; i <= b; i++) r.push(i);
+        return r;
+      }
+    }
+    if (t === "подвал") return [];
+    const n = parseInt(t, 10);
+    return n >= 1 && n <= 40 ? [n] : null;
+  }
+
+  function mergeNumeric(toks) {
+    const out = [];
+    (toks || []).forEach((p) => {
+      const last = out[out.length - 1];
+      const numish = /^[\d.,]+$/.test(p.t);
+      const lastNum = last && /^[\d.,]+$/.test(last.t);
+      const same = last && Math.abs(last.y - p.y) <= Math.max(3, last.h * 0.55);
+      const gap = last ? p.x - (last.x + last.w) : 99;
+      if (same && lastNum && numish && last.t.length <= 3 && p.t.length <= 3 && gap < 8 && gap > -3) {
+        last.t += p.t;
+        last.w = p.x + p.w - last.x;
+        return;
+      }
+      out.push({ t: p.t, x: p.x, y: p.y, w: p.w, h: p.h });
+    });
+    return out;
+  }
+
+  function itemsToToks(items) {
+    return (items || [])
+      .filter((it) => it && it.str)
+      .map((it) => {
+        const tr = it.transform || [1, 0, 0, 1, 0, 0];
+        const h = Math.abs(it.height || tr[3] || 8);
+        return { t: it.str, x: tr[4], y: tr[5], w: it.width || h * 0.5 * it.str.length, h };
+      });
+  }
+
+  function collectDotted(toks, pageNo, out) {
+    const dottedId = /^\d{2}\.\d\.\d{1,2}$/;
+    const areaTok = /^\d{1,3}[.,]\d{2}$/;
+    const ids = (toks || []).filter((t) => dottedId.test(String(t.t).trim()));
+    const areaToks = (toks || []).filter((t) => areaTok.test(t.t) && nfloat(t.t) >= 3 && nfloat(t.t) <= 200);
+    const seenId = {};
+    ids.forEach((tp) => {
+      const id = tp.t.trim();
+      if (seenId[id]) return;
+      const col = areaToks
+        .filter((a) => Math.abs(a.x - tp.x) < 30 && Math.abs(a.y - tp.y) < 60)
+        .sort((a, b) => a.y - b.y);
+      if (col.length < 3) return;
+      const rec = fromDottedId(id, col.slice(0, 4).map((a) => nfloat(a.t)), pageNo);
+      if (!rec) return;
+      seenId[id] = true;
+      out.push(rec);
+    });
+  }
+
+  function parseStampsFromItems(items, pageNo, fileName) {
+    const rawToks = itemsToToks(items);
+    const merged = mergeItems(items);
+    const mergedNum = mergeNumeric(merged);
+    const out = [];
+    const pageText = toksToText(rawToks) + "\n" + toksToText(merged);
+    collectDotted(rawToks, pageNo, out);
+    collectDotted(mergedNum, pageNo, out);
+    parseStampsFromText(toksToText(rawToks), pageNo, fileName).forEach((s) => out.push(s));
+    parseStampsFromText(toksToText(merged), pageNo, fileName).forEach((s) => out.push(s));
     const typeRe = /^[1-6][SMLМм]$/i;
     const areaRe = /^\d+[.,]\d+$/;
-    const types = toks.filter((t) => typeRe.test(t.t.trim()));
-    const areas = toks.filter((t) => areaRe.test(t.t) && nfloat(t.t) >= 3 && nfloat(t.t) <= 450);
+    const types = merged.filter((t) => typeRe.test(t.t.trim()));
+    const areas = merged.filter((t) => areaRe.test(t.t) && nfloat(t.t) >= 3 && nfloat(t.t) <= 450);
     const nums = [];
-    toks.forEach((t) => {
+    merged.forEach((t) => {
       const m = t.t.replace(/\s+/g, "").match(/^[№Nn#]?(\d{1,4})$/);
       if (!m) return;
       if (m[1].length >= 4 && t.t.indexOf("№") < 0) return;
@@ -133,27 +270,79 @@
       const tm = tp.t.trim().match(/^([1-6])([SMLМм])$/i);
       out.push(stampRecord(tm[1], tm[2], four[0].t, four[1].t, four[2].t, four[3].t, ncand[0].num, pageNo));
     });
-    const pageText = toks.map((t) => t.t).join("\n");
-    return attachFloorSection(out, pageText, pageNo, fileName);
+    return attachFloorSection(out, pageText, pageNo, fileName, rawToks);
   }
 
-  function attachFloorSection(stamps, text, pageNo, fileName) {
+  function attachFloorSection(stamps, text, pageNo, fileName, toks) {
     const isK2 = /[кkКK]-?2|айвазов/i.test(fileName || "");
-    const floors = isK2 ? (PAGE_FLOORS_K2[pageNo] || []) : guessFloors(text || "");
+    const dottedCodes = new Set((stamps || []).filter((s) => s.code).map((s) => s.code));
+    if (!isK2 && dottedCodes.size >= 12) {
+      stamps = (stamps || []).filter((s) => !s.code);
+    }
+    let floors = isK2 ? (PAGE_FLOORS_K2[pageNo] || []) : guessFloors(text || "");
+    if (!isK2) {
+      const geo = guessFloorsGeo(toks || []);
+      if (geo && geo.length === 0) floors = [];
+      else if (geo && geo.length) floors = geo;
+    }
+    const expand = !isK2 && floors.length > 1;
+    const out = [];
     stamps.forEach((s) => {
+      const section = s.section != null ? s.section : guessSection(text || "");
+      if (!isK2 && !floors.length) {
+        if (s.code) return;
+        s.floor = null;
+        s.floor_candidates = [];
+        s.floor_uncertain = true;
+        s.section = section;
+        out.push(s);
+        return;
+      }
+      if (expand) {
+        floors.forEach((fl) => {
+          out.push(Object.assign({}, s, {
+            floor: fl,
+            floor_candidates: floors,
+            floor_uncertain: false,
+            section,
+          }));
+        });
+        return;
+      }
       s.floor = floors.length === 1 ? floors[0] : floors[0] || null;
       s.floor_candidates = floors;
       s.floor_uncertain = floors.length > 1;
-      s.section = guessSection(text || "");
+      s.section = section;
+      out.push(s);
     });
-    return stamps;
+    return out;
   }
 
   function guessFloors(text) {
-    let m = text.match(/План\s+(\d+)(?:\s*[-–]\s*(\d+))?\s*этаж/i);
-    if (!m) m = text.match(/(\d{1,2})\s*[-–]\s*(\d{1,2})\s*этаж/i);
+    const titles = [];
+    const titleRe = /План\s+(подвала|\d+(?:\s*[-–]\s*\d+)?\s*этаж[аей]*)/gi;
+    let tm;
+    while ((tm = titleRe.exec(text || ""))) titles.push(tm[1].replace(/\s+/g, " ").toLowerCase());
+    if ([...new Set(titles)].length >= 3) return [];
+    let m = (text || "").match(/План\s+(\d+)\s*[-–]\s*(\d+)\s*этаж/i);
+    if (m) {
+      const a = parseInt(m[1], 10);
+      const b = parseInt(m[2], 10);
+      if (a >= 1 && a <= 40 && b >= a && b <= 40) {
+        const r = [];
+        for (let i = a; i <= b; i++) r.push(i);
+        return r;
+      }
+    }
+    m = (text || "").match(/План\s+(\d+)\s*этажа/i);
+    if (m) {
+      const n = parseInt(m[1], 10);
+      return n >= 1 && n <= 40 ? [n] : [];
+    }
+    m = (text || "").match(/План\s+(\d+)(?:\s*[-–]\s*(\d+))?\s*этаж/i);
+    if (!m) m = (text || "").match(/(\d{1,2})\s*[-–]\s*(\d{1,2})\s*этаж/i);
     if (!m) {
-      const one = text.match(/(?:этаж|эт\.?)\s*(\d{1,2})\b/i) || text.match(/\b(\d{1,2})\s*этаж/i);
+      const one = (text || "").match(/(?:этаж|эт\.?)\s*(\d{1,2})\b/i) || (text || "").match(/\b(\d{1,2})\s*этаж/i);
       return one ? [parseInt(one[1], 10)] : [];
     }
     const a = parseInt(m[1], 10);
@@ -164,21 +353,38 @@
   }
 
   function guessSection(text) {
-    const m = text.match(/\b(\d{1,2}\.[1-9])\b/);
+    const titled = (text || "").match(/Секци[яи]\s*(\d{1,2}\.\d)/i);
+    if (titled) return parseFloat(titled[1]);
+    const m = (text || "").match(/\b(\d(?:\.\d)?)\s*секц/i);
     return m ? parseFloat(m[1]) : 1;
   }
 
-  function guessGp(fileName) {
-    const m = String(fileName || "").match(/(\d{3,4})/);
+  function guessGp(fileName, stamps) {
+    if (stamps && stamps.length) {
+      const hit = stamps.find((s) => s.gp != null);
+      if (hit) return hit.gp;
+    }
+    const named = String(fileName || "").match(/(?:ГП|GP)[-_]?(\d{1,2})\b/i);
+    if (named) return parseInt(named[1], 10);
+    const dash = String(fileName || "").match(/(\d{4,5})-(\d{1,2})/);
+    if (dash) return parseInt(dash[2], 10);
+    const m = String(fileName || "").match(/(\d{3,5})/);
     return m ? parseInt(m[1], 10) : 1506;
   }
 
   function uniqueByNum(stamps) {
+    return uniqueByApt(stamps);
+  }
+
+  function uniqueByApt(stamps) {
     const map = new Map();
     for (const s of stamps) {
-      if (!map.has(s.num)) map.set(s.num, s);
+      const key = `${s.floor == null ? "" : s.floor}|${s.section}|${s.num}`;
+      if (!map.has(key)) map.set(key, s);
     }
-    return [...map.values()].sort((a, b) => (a.floor || 0) - (b.floor || 0) || a.num - b.num);
+    return [...map.values()].sort(
+      (a, b) => (a.floor || 0) - (b.floor || 0) || (a.section || 0) - (b.section || 0) || a.num - b.num
+    );
   }
 
   function composeRow(apt, seq, onFloor, floorCount, gp) {
@@ -404,12 +610,10 @@
       const tc = await page.getTextContent();
       const items = tc.items || [];
       chars += items.reduce((n, it) => n + (it.str ? it.str.length : 0), 0);
-      const text = items.map((it) => it.str || "").join("\n");
-      stamps.push(...parseStampsFromText(text, i, file.name));
       stamps.push(...parseStampsFromItems(items, i, file.name));
       if (onPage) onPage(i, pdf.numPages);
     }
-    return { stamps: uniqueByNum(stamps), pages: pdf.numPages, chars };
+    return { stamps: uniqueByApt(stamps), pages: pdf.numPages, chars };
   }
 
   function composeAll(apts, gp) {
@@ -418,7 +622,7 @@
     const seen = {};
     return apts.map((a, i) => {
       seen[a.floor] = (seen[a.floor] || 0) + 1;
-      return composeRow(a, i + 1, seen[a.floor], byFloor[a.floor] || 1, gp);
+      return composeRow(a, i + 1, seen[a.floor], byFloor[a.floor] || 1, a.gp || gp);
     });
   }
 
@@ -437,6 +641,7 @@
     parseStampsFromItems,
     guessGp,
     uniqueByNum,
+    uniqueByApt,
     composeAll,
     metrics,
     loadSkeleton,

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Осуществимость — Матрица квартирографии</title>
+  <style>
+    :root { --navy:#122A4B; --ink:#1c2530; --muted:#5E6B78; --line:#DDE3E9; --soft:#F5F8FA; --ok:#1F6B4A; --warn:#8A6420; --bad:#8B2E2E; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: var(--ink); line-height: 1.55; }
+    header { background: var(--navy); color: #fff; padding: 48px 28px 40px; }
+    .wrap { max-width: 920px; margin: 0 auto; padding: 0 28px 72px; }
+    header .wrap { padding-bottom: 0; }
+    .eyebrow { font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: #9BB4CC; margin: 0 0 12px; }
+    h1 { font-size: 32px; margin: 0 0 12px; font-weight: 600; }
+    .lede { color: #C9D8E6; max-width: 680px; }
+    .verdict { display: inline-block; margin-top: 22px; padding: 8px 14px; background: #1F6B4A; color: #fff; font-weight: 700; letter-spacing: .04em; font-size: 13px; }
+    h2 { font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line); padding-bottom: 10px; margin: 48px 0 18px; }
+    h3 { font-size: 18px; color: var(--navy); margin: 28px 0 10px; }
+    p { margin: 0 0 12px; }
+    .muted { color: var(--muted); font-size: 14px; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 20px 0; }
+    .card { background: var(--soft); padding: 16px; border-radius: 8px; }
+    .card .n { font-size: 26px; font-weight: 700; color: var(--navy); }
+    .card .l { font-size: 13px; color: var(--muted); margin-top: 4px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14.5px; margin: 14px 0 22px; }
+    th { text-align: left; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); border-bottom: 2px solid var(--navy); padding: 0 10px 8px 0; }
+    td { padding: 10px 10px 10px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+    td.r { text-align: right; font-variant-numeric: tabular-nums; }
+    .ok { color: var(--ok); font-weight: 600; }
+    .warn { color: var(--warn); font-weight: 600; }
+    .bad { color: var(--bad); font-weight: 600; }
+    .note { background: var(--soft); border-left: 3px solid #C6DCEA; padding: 14px 16px; margin: 18px 0; }
+    footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+  </style>
+</head>
+<body>
+<header><div class="wrap">
+  <p class="eyebrow">Публикация · 28.08.2026</p>
+  <h1>Матрица квартирографии:<br>осуществимость по паспорту</h1>
+  <p class="lede">Разбор паспорта, эталонного xlsm ГП-10 и планировок ЖК «Айвазовский». Живая версия — canvas рядом с чатом в Cursor.</p>
+  <div class="verdict">ВЕРДИКТ: РЕАЛИЗУЕМО</div>
+</div></header>
+<div class="wrap">
+
+  <div class="cards">
+    <div class="card"><div class="n">76 / 76</div><div class="l">поля ввода сверены</div></div>
+    <div class="card"><div class="n">1 054</div><div class="l">квартиры эталона ГП-10</div></div>
+    <div class="card"><div class="n">490</div><div class="l">штампы в тестовых PDF</div></div>
+    <div class="card"><div class="n">184 ч</div><div class="l">оценка паспорта · 82 800 ₽</div></div>
+  </div>
+
+  <h2>Вердикт</h2>
+  <p>Контур паспорта подтверждён. Автоматизировать нужно не 344 подписанных поля, а <b>76 исходных колонок</b> листа «Квартирография (жилое)». Формулы (комнатность, площади, коэффициенты, цена) уже в файле — парсер пишет только значения.</p>
+  <div class="note">Пилот по штампам квартир из векторного PDF можно запускать сразу. Полный объём 76 полей упирается в <b>IFC-выгрузку</b> и <b>письменные правила ЭНКО</b>, не в архитектуру матрицы.</div>
+
+  <h2>Сверка с паспортом</h2>
+  <table>
+    <thead><tr><th>Показатель</th><th class="r">Паспорт</th><th class="r">Проверка 28.08</th><th>Статус</th></tr></thead>
+    <tbody>
+      <tr><td>Квартиры, жилой лист</td><td class="r">1 054</td><td class="r">1 054</td><td class="ok">совпало</td></tr>
+      <tr><td>Колонки ручного ввода</td><td class="r">76</td><td class="r">75 + 1 смешанная</td><td class="ok">совпало</td></tr>
+      <tr><td>Колонки-формулы</td><td class="r">183</td><td class="r">182</td><td class="warn">−1</td></tr>
+      <tr><td>Штампы К-1</td><td class="r">234 / 221 полных</td><td class="r">232 уникальных</td><td class="ok">прототип подтверждён</td></tr>
+      <tr><td>Штампы К-2</td><td class="r">72</td><td class="r">81</td><td class="warn">больше, чем в паспорте</td></tr>
+      <tr><td>Штампы К-3</td><td class="r">не в прототипе</td><td class="r">177</td><td>новый корпус</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Главный разрыв тестового набора</h2>
+  <p>Эталон <code>!Матрица квартирографии ГП-10_04.08.26.xlsm</code> заполнен по <b>ГП = 10</b>. Планировки в папке «Планировки АР_итоги + матрица 08.26» — <b>ЖК «Айвазовский»</b> (шифр 1506), корпуса К-1, К-2, К-3. Сверять извлечение с ГП-10 по этим PDF нельзя: это разные дома.</p>
+
+  <h2>Откуда 76 полей</h2>
+  <table>
+    <thead><tr><th>Категория</th><th class="r">Полей</th><th>Автомат</th></tr></thead>
+    <tbody>
+      <tr><td>Геометрия помещений</td><td class="r">29</td><td class="ok">да, IFC + PDF</td></tr>
+      <tr><td>Положение в доме</td><td class="r">10</td><td class="ok">да, при параметрах / штампах</td></tr>
+      <tr><td>Классификация по правилу</td><td class="r">28</td><td class="warn">после правил ЭНКО</td></tr>
+      <tr><td>Внешний контекст</td><td class="r">8</td><td class="bad">человек (паспорт)</td></tr>
+      <tr><td>Служебное</td><td class="r">1</td><td class="ok">да</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Эталон xlsm</h2>
+  <p>19 листов, VBA на месте, 14,5 МБ. Целевой лист 5 202 × 349, данные с 8-й строки, все 1 054 квартиры с ГП=10. Писать только в исходные колонки: H–P и блок коэффициентов — формулы.</p>
+  <p class="muted">Замечание по шаблону: группа R6 «Лоджия 1» подписана в R7 как «Лоджия 2». Маппинг колонок вести по строке 6, не слепо по строке 7.</p>
+
+  <h3>Адресация (1 054 / 1 054)</h3>
+  <p>A №, B ГП, C секция, D этаж, E номер квартиры, F номер на этаже, G квартир на этаже, DP сторона света.</p>
+
+  <h3>Геометрия, которая реально стоит в эталоне</h3>
+  <table>
+    <thead><tr><th>Поле</th><th class="r">Строк</th></tr></thead>
+    <tbody>
+      <tr><td>Прихожая / тип кухни / комната 1 / с/у 1</td><td class="r">1 054</td></tr>
+      <tr><td>Высота потолка</td><td class="r">1 046</td></tr>
+      <tr><td>Комната 2 / с/у 2</td><td class="r">477 / 457</td></tr>
+      <tr><td>Балкон 1</td><td class="r">157</td></tr>
+      <tr><td>Коридор 1</td><td class="r">150</td></tr>
+      <tr><td>Лоджия</td><td class="r">126</td></tr>
+      <tr><td>Терраса 1 / французский балкон / двухуровневая</td><td class="r">50 / 43 / 11</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Исходники Айвазовского</h2>
+  <table>
+    <thead><tr><th>Файл</th><th>Читаемость 28.08</th></tr></thead>
+    <tbody>
+      <tr><td>К1–К3.rvt, К2.rvt (OLE Revit)</td><td class="bad">без Revit / IFC не разобрать</td></tr>
+      <tr><td>К-1 / К-2 / К-3 планировки.pdf (PDF-1.4)</td><td class="ok">текст, площади, штампы читаются</td></tr>
+      <tr><td>К-1/2/3_DWG.rar (RAR v5)</td><td class="warn">в среде нет 7z/unrar</td></tr>
+      <tr><td>автостоянка.pdf</td><td>вне объёма (паркинг)</td></tr>
+    </tbody>
+  </table>
+  <p>Пример штампа К-1, как в паспорте: <b>№191 · 3 M · 41.04, 88.53, 88.62, 88.62</b>. На К-1 и К-3 подписаны комната / кухня-столовая / с/у / гардероб / лоджия. На К-2 чаще «жилая зона / зона кухни» — классификация слабее.</p>
+
+  <h2>Критерии приёмки (из паспорта)</h2>
+  <table>
+    <thead><tr><th>Группа</th><th>Порог</th></tr></thead>
+    <tbody>
+      <tr><td>Адресация лота</td><td>100% совпадений</td></tr>
+      <tr><td>Площади и высоты</td><td>≥ 99% в пределах ±0,01 м²</td></tr>
+      <tr><td>Классификация</td><td>≥ 90%, остальное помечено</td></tr>
+      <tr><td>Внешний контекст</td><td>не автоматизируется</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Первый спринт</h2>
+  <ol>
+    <li>Копия шаблона ГП-10 без строк ГП=10 — не затирать эталон.</li>
+    <li>Парсер штампов К-1/К-2/К-3 → ~490 строк.</li>
+    <li>Привязка подписей помещений к квартире.</li>
+    <li>Лист «требует проверки».</li>
+    <li>Запрос IFC: IfcSpace + этаж + номер.</li>
+  </ol>
+
+  <h2>Риски, подтверждённые файлами</h2>
+  <ul>
+    <li>IFC в тестовой папке нет — только .rvt.</li>
+    <li>Свода правил 28 полей нет; в файле есть выпадающие списки и коэффициенты.</li>
+    <li>ГП-10 нельзя использовать как метрику точности для Айвазовского.</li>
+    <li>Номера лотов уже читаются со штампов PDF — запасной путь паспорта работает.</li>
+  </ul>
+
+  <p>Оценка 184 ч остаётся реалистичной, если ЭНКО отдаёт IFC с помещениями и правила классификации. Без этого проект сужается до PDF-парсера и ручной доводки 28+8 полей — всё ещё окупаемо на корпусе, но не «один прогон → готовая матрица».</p>
+
+  <footer>
+    Источники: Паспорт_проекта_Матрица.html · !Матрица квартирографии ГП-10_04.08.26.xlsm · Планировки АР_итоги + матрица 08.26.<br>
+    Живой canvas: matrix-passport-feasibility.canvas.tsx в каталоге canvases рабочего пространства Cursor.
+  </footer>
+</div>
+</body>
+</html>

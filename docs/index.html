@@ -3,85 +3,80 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#122a4b">
+  <meta name="theme-color" content="#122A4B">
   <title>Матрица квартирографии — ЭНКО</title>
-  <link rel="icon" type="image/svg+xml" href="brand/logo-sign.svg">
+  <link rel="icon" href="favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header class="masthead">
-    <div class="wrap masthead-inner">
-      <a class="brand" href="./" aria-label="ЭНКО">
-        <img class="brand-sign" src="brand/logo-sign.svg" alt="ЭНКО">
-      </a>
-      <nav class="nav" aria-label="Раздел">
-        <span class="on">Матрица квартирографии</span>
-      </nav>
-    </div>
-  </header>
-
-  <section class="intro">
-    <div class="wrap">
-      <p class="eyebrow">Агент</p>
-      <h1>Матрица квартирографии</h1>
-      <p class="lede">Загрузите планировки PDF. Агент снимет штампы и запишет их в копию шаблона ГП-10: те же форматы ячеек, оформление и VBA. Основная выгрузка — .xlsm.</p>
-    </div>
-  </section>
-
-  <main class="wrap layout">
-    <section class="panel">
-      <h2>Исходный файл</h2>
-      <label class="drop" id="drop">
-        <input id="file" type="file" accept=".pdf,.rvt,.dwg,.xlsx,.xlsm,application/pdf">
-        <strong id="fileLabel">Выберите или перетащите файл</strong>
-        <span>PDF планировок — основной путь. RVT без IFC не читается в браузере.</span>
-      </label>
-      <div class="row">
-        <button type="button" class="ghost" id="btnDemo">Демо: К-2 Айвазовский</button>
+  <div class="app">
+    <header>
+      <div class="brand">
+        <img class="brand-mark" src="brand/mark.png" width="36" height="36" alt="">
+        <img class="brand-wordmark" src="brand/wordmark.svg" alt="ЭНКО">
+        <div class="brand-text">
+          <h1>Матрица квартирографии</h1>
+          <p>Загрузите планировки PDF. Агент Основная выгрузка — .xlsm.</p>
+        </div>
       </div>
-      <h2>Формат выгрузки</h2>
-      <div class="seg" role="group">
-        <button type="button" class="seg-btn" data-fmt="xlsx" id="fmtXlsx">.xlsx</button>
-        <button type="button" class="seg-btn on" data-fmt="xlsm" id="fmtXlsm">.xlsm</button>
+    </header>
+
+    <main class="wrap layout">
+      <section class="panel">
+        <h2>Исходный файл</h2>
+        <label class="drop" id="drop">
+          <input id="file" type="file" accept=".pdf,.rvt,.dwg,.xlsx,.xlsm,application/pdf">
+          <strong id="fileLabel">Выберите или перетащите файл</strong>
+          <span>PDF планировок — основной путь. RVT без IFC не читается в браузере.</span>
+        </label>
+        <div class="row">
+          <button type="button" class="ghost" id="btnDemo">Демо: К-2 Айвазовский</button>
+        </div>
+        <h2>Формат выгрузки</h2>
+        <div class="seg" role="group">
+          <button type="button" class="seg-btn" data-fmt="xlsx" id="fmtXlsx">.xlsx</button>
+          <button type="button" class="seg-btn on" data-fmt="xlsm" id="fmtXlsm">.xlsm</button>
+        </div>
+        <p class="hint" id="fmtHint">xlsm — копия шаблона ГП-10: форматы ячеек, оформление и VBA.</p>
+        <button type="button" class="primary" id="btnRun" disabled>Запустить агента</button>
+      </section>
+
+      <section class="panel">
+        <h2>Ход процесса</h2>
+        <ol class="steps" id="steps"></ol>
+        <div class="bar"><i id="bar"></i></div>
+        <p class="hint" id="status">Ожидание файла</p>
+      </section>
+    </main>
+
+    <section class="wrap metrics" id="metricsBlock" hidden>
+      <h2>Итоговые метрики</h2>
+      <div class="stats" id="stats"></div>
+      <div class="charts">
+        <div>
+          <h3>Квартиры по этажам</h3>
+          <div id="floorBars" class="hbars"></div>
+        </div>
+        <div>
+          <h3>Тип кухни</h3>
+          <div id="kitBars" class="hbars"></div>
+        </div>
       </div>
-      <p class="hint" id="fmtHint">xlsm — копия шаблона ГП-10: форматы ячеек, оформление и VBA.</p>
-      <button type="button" class="primary" id="btnRun" disabled>Запустить агента</button>
+      <table class="grid" id="preview"></table>
+      <div class="row end">
+        <button type="button" class="primary" id="btnDl" hidden>Скачать матрицу</button>
+      </div>
     </section>
 
-    <section class="panel">
-      <h2>Ход процесса</h2>
-      <ol class="steps" id="steps"></ol>
-      <div class="bar"><i id="bar"></i></div>
-      <p class="hint" id="status">Ожидание файла</p>
-    </section>
-  </main>
-
-  <section class="wrap metrics" id="metricsBlock" hidden>
-    <h2>Итоговые метрики</h2>
-    <div class="stats" id="stats"></div>
-    <div class="charts">
-      <div>
-        <h3>Квартиры по этажам</h3>
-        <div id="floorBars" class="hbars"></div>
-      </div>
-      <div>
-        <h3>Тип кухни</h3>
-        <div id="kitBars" class="hbars"></div>
-      </div>
-    </div>
-    <table class="grid" id="preview"></table>
-    <div class="row end">
-      <button type="button" class="primary" id="btnDl" hidden>Скачать матрицу</button>
-    </div>
-  </section>
-
-  <footer class="wrap foot">
-    <img class="foot-mark" src="brand/logo-word-navy.svg" alt="ЭНКО">
-    <span>Источник колонок — матрица ГП-10. Обработка идёт в браузере, файлы на сервер не уходят.</span>
-  </footer>
+    <footer class="wrap foot">
+      <img class="foot-mark" src="brand/wordmark.svg" alt="ЭНКО">
+    </footer>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>

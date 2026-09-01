@@ -3,17 +3,33 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Агент матрицы квартирографии</title>
+  <meta name="theme-color" content="#122a4b">
+  <title>Матрица квартирографии — ЭНКО</title>
+  <link rel="icon" type="image/svg+xml" href="brand/logo-sign.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header class="top">
+  <header class="masthead">
+    <div class="wrap masthead-inner">
+      <a class="brand" href="./" aria-label="ЭНКО">
+        <img class="brand-sign" src="brand/logo-sign.svg" alt="ЭНКО">
+      </a>
+      <nav class="nav" aria-label="Раздел">
+        <span class="on">Матрица квартирографии</span>
+      </nav>
+    </div>
+  </header>
+
+  <section class="intro">
     <div class="wrap">
-      <p class="eyebrow">Агент · ЭНКО / matrix</p>
+      <p class="eyebrow">Агент</p>
       <h1>Матрица квартирографии</h1>
       <p class="lede">Загрузите планировки PDF. Агент снимет штампы и запишет их в копию шаблона ГП-10: те же форматы ячеек, оформление и VBA. Основная выгрузка — .xlsm.</p>
     </div>
-  </header>
+  </section>
 
   <main class="wrap layout">
     <section class="panel">
@@ -43,7 +59,7 @@
     </section>
   </main>
 
-  <section class="wrap" id="metricsBlock" hidden>
+  <section class="wrap metrics" id="metricsBlock" hidden>
     <h2>Итоговые метрики</h2>
     <div class="stats" id="stats"></div>
     <div class="charts">
@@ -63,7 +79,8 @@
   </section>
 
   <footer class="wrap foot">
-    Источник колонок — матрица ГП-10. Обработка идёт в браузере, файлы на сервер не уходят.
+    <img class="foot-mark" src="brand/logo-word-navy.svg" alt="ЭНКО">
+    <span>Источник колонок — матрица ГП-10. Обработка идёт в браузере, файлы на сервер не уходят.</span>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>

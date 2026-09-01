@@ -61,6 +61,7 @@
     fileLabel.textContent = f ? f.name : "Выберите или перетащите файл";
     btnRun.disabled = !f && !useDemo;
     status.textContent = useDemo ? "Демо К-2 загружено — можно запускать" : f ? "Файл принят" : "Ожидание файла";
+    status.classList.remove("err");
   }
 
   fileEl.addEventListener("change", () => {
@@ -137,6 +138,7 @@
     MatrixAgent.STEPS.forEach((s) => { stepState[s.id] = "idle"; });
     renderSteps(stepState);
     bar.style.width = "0";
+    status.classList.remove("err");
     try {
       await mark("accept", "run");
       if (!file && !useDemo) throw new Error("Файл не выбран");
@@ -204,10 +206,12 @@
       await mark("metrics", "run");
       showMetrics(meta, rows);
       status.textContent = `Готово: ${meta.apartments} квартир. Можно скачать ${fmt}.`;
+      status.classList.remove("err");
       await mark("metrics", "ok");
       bar.style.width = "100%";
     } catch (err) {
       status.textContent = err.message || String(err);
+      status.classList.add("err");
       const running = MatrixAgent.STEPS.find((s) => stepState[s.id] === "run");
       if (running) await mark(running.id, "err");
     } finally {
